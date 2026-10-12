@@ -2,7 +2,6 @@
 #include <vector>
 #include <algorithm>
 #include <cstdio>
-#include <unordered_map>
 
 using namespace std;
 
@@ -10,13 +9,9 @@ class UnionFind {
 private:
     vector<int> parent;
     vector<int> rank;
-    int n;
     
 public:
-    UnionFind(int size) {
-        n = size;
-        parent.resize(n);
-        rank.resize(n, 0);
+    UnionFind(int n) : parent(n), rank(n, 0) {
         for (int i = 0; i < n; i++) {
             parent[i] = i;
         }
@@ -51,6 +46,22 @@ public:
     }
 };
 
+// Binary search to find the compressed index
+int compress(const vector<int>& sorted_vars, int val) {
+    int left = 0, right = sorted_vars.size() - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (sorted_vars[mid] == val) {
+            return mid;
+        } else if (sorted_vars[mid] < val) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return -1; // Should never happen
+}
+
 int main() {
     // Use faster I/O
     ios_base::sync_with_stdio(false);
@@ -63,46 +74,47 @@ int main() {
         int n;
         scanf("%d", &n);
         
-        vector<tuple<int, int, int>> constraints;
+        vector<pair<int, int>> equalities;
+        vector<pair<int, int>> inequalities;
         vector<int> variables;
         
         // Read all constraints and collect all variable indices
         for (int i = 0; i < n; i++) {
             int x, y, e;
             scanf("%d %d %d", &x, &y, &e);
-            constraints.emplace_back(x, y, e);
             variables.push_back(x);
             variables.push_back(y);
+            
+            if (e == 1) {
+                equalities.emplace_back(x, y);
+            } else {
+                inequalities.emplace_back(x, y);
+            }
         }
         
         // Coordinate compression
         sort(variables.begin(), variables.end());
-        variables.erase(unique(variables.begin(), variables.end()), variables.end());
-        
-        // Map original variable indices to compressed indices
-        unordered_map<int, int> comp;
-        for (int i = 0; i < variables.size(); i++) {
-            comp[variables[i]] = i;
-        }
+        auto last = unique(variables.begin(), variables.end());
+        variables.erase(last, variables.end());
         
         // Create UnionFind with compressed indices
         UnionFind uf(variables.size());
         bool possible = true;
         
         // Process equality constraints
-        for (auto& [x, y, e] : constraints) {
-            if (e == 1) { // equality constraint
-                uf.unite(comp[x], comp[y]);
-            }
+        for (auto& [x, y] : equalities) {
+            int cx = compress(variables, x);
+            int cy = compress(variables, y);
+            uf.unite(cx, cy);
         }
         
         // Check inequality constraints
-        for (auto& [x, y, e] : constraints) {
-            if (e == 0) { // inequality constraint
-                if (uf.connected(comp[x], comp[y])) {
-                    possible = false;
-                    break;
-                }
+        for (auto& [x, y] : inequalities) {
+            int cx = compress(variables, x);
+            int cy = compress(variables, y);
+            if (uf.connected(cx, cy)) {
+                possible = false;
+                break;
             }
         }
         
