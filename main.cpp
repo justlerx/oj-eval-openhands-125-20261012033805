@@ -6,40 +6,41 @@
 
 using namespace std;
 
-class UnionFind {
-private:
+// Simple Union-Find with path compression
+struct UnionFind {
     vector<int> parent;
     vector<int> rank;
     
-public:
-    UnionFind(int n) : parent(n), rank(n, 0) {
+    UnionFind(int n) {
+        parent.resize(n);
+        rank.resize(n, 0);
         for (int i = 0; i < n; i++) {
             parent[i] = i;
         }
     }
     
     int find(int x) {
-        while (parent[x] != x) {
-            parent[x] = parent[parent[x]]; // Path compression by halving
-            x = parent[x];
+        // Simple path compression
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]);
         }
-        return x;
+        return parent[x];
     }
     
     void unite(int x, int y) {
-        int rootX = find(x);
-        int rootY = find(y);
+        int rx = find(x);
+        int ry = find(y);
         
-        if (rootX == rootY) return;
+        if (rx == ry) return;
         
         // Union by rank
-        if (rank[rootX] < rank[rootY]) {
-            parent[rootX] = rootY;
-        } else if (rank[rootX] > rank[rootY]) {
-            parent[rootY] = rootX;
+        if (rank[rx] < rank[ry]) {
+            parent[rx] = ry;
+        } else if (rank[rx] > rank[ry]) {
+            parent[ry] = rx;
         } else {
-            parent[rootY] = rootX;
-            rank[rootX]++;
+            parent[ry] = rx;
+            rank[rx]++;
         }
     }
     
@@ -60,42 +61,42 @@ int main() {
         int n;
         scanf("%d", &n);
         
-        vector<int> variables;
+        // Vectors to store variables and constraints
+        vector<int> vars;
         vector<tuple<int, int, int>> constraints;
         
-        // Read all constraints and collect all variable indices
+        // Read all constraints and collect variables
         for (int i = 0; i < n; i++) {
             int x, y, e;
             scanf("%d %d %d", &x, &y, &e);
-            variables.push_back(x);
-            variables.push_back(y);
+            vars.push_back(x);
+            vars.push_back(y);
             constraints.emplace_back(x, y, e);
         }
         
         // Coordinate compression
-        sort(variables.begin(), variables.end());
-        auto last = unique(variables.begin(), variables.end());
-        variables.erase(last, variables.end());
+        sort(vars.begin(), vars.end());
+        vars.erase(unique(vars.begin(), vars.end()), vars.end());
         
-        // Create a mapping from original variable to compressed index
+        // Create mapping from variable to compressed index
         unordered_map<int, int> comp;
-        for (int i = 0; i < variables.size(); i++) {
-            comp[variables[i]] = i;
+        for (int i = 0; i < vars.size(); i++) {
+            comp[vars[i]] = i;
         }
         
-        // Create UnionFind with compressed indices
-        UnionFind uf(variables.size());
+        // Create UnionFind structure
+        UnionFind uf(vars.size());
         bool possible = true;
         
-        // Process equality constraints
-        for (auto& [x, y, e] : constraints) {
+        // Process equality constraints (e = 1)
+        for (const auto& [x, y, e] : constraints) {
             if (e == 1) {
                 uf.unite(comp[x], comp[y]);
             }
         }
         
-        // Check inequality constraints
-        for (auto& [x, y, e] : constraints) {
+        // Check inequality constraints (e = 0)
+        for (const auto& [x, y, e] : constraints) {
             if (e == 0) {
                 if (uf.connected(comp[x], comp[y])) {
                     possible = false;
@@ -104,11 +105,7 @@ int main() {
             }
         }
         
-        if (possible) {
-            printf("YES\n");
-        } else {
-            printf("NO\n");
-        }
+        printf(possible ? "YES\n" : "NO\n");
     }
     
     return 0;
