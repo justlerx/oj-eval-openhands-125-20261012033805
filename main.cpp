@@ -1,24 +1,28 @@
 #include <iostream>
 #include <vector>
-#include <unordered_map>
 #include <algorithm>
 #include <cstdio>
+#include <unordered_map>
 
 using namespace std;
 
 class UnionFind {
 private:
-    unordered_map<int, int> parent;
-    unordered_map<int, int> rank;
+    vector<int> parent;
+    vector<int> rank;
+    int n;
     
 public:
-    int find(int x) {
-        if (parent.find(x) == parent.end()) {
-            parent[x] = x;
-            rank[x] = 0;
-            return x;
+    UnionFind(int size) {
+        n = size;
+        parent.resize(n);
+        rank.resize(n, 0);
+        for (int i = 0; i < n; i++) {
+            parent[i] = i;
         }
-        
+    }
+    
+    int find(int x) {
         if (parent[x] != x) {
             parent[x] = find(parent[x]);
         }
@@ -45,11 +49,6 @@ public:
     bool connected(int x, int y) {
         return find(x) == find(y);
     }
-    
-    void clear() {
-        parent.clear();
-        rank.clear();
-    }
 };
 
 int main() {
@@ -60,36 +59,50 @@ int main() {
     int t;
     scanf("%d", &t);
     
-    UnionFind uf;
-    
     while (t--) {
         int n;
         scanf("%d", &n);
         
-        // Clear the union-find structure for each test case
-        uf.clear();
+        vector<tuple<int, int, int>> constraints;
+        vector<int> variables;
         
-        // We'll store inequality constraints to check after processing equalities
-        vector<pair<int, int>> inequalities;
-        bool possible = true;
-        
-        // Process constraints
+        // Read all constraints and collect all variable indices
         for (int i = 0; i < n; i++) {
             int x, y, e;
             scanf("%d %d %d", &x, &y, &e);
-            
+            constraints.emplace_back(x, y, e);
+            variables.push_back(x);
+            variables.push_back(y);
+        }
+        
+        // Coordinate compression
+        sort(variables.begin(), variables.end());
+        variables.erase(unique(variables.begin(), variables.end()), variables.end());
+        
+        // Map original variable indices to compressed indices
+        unordered_map<int, int> comp;
+        for (int i = 0; i < variables.size(); i++) {
+            comp[variables[i]] = i;
+        }
+        
+        // Create UnionFind with compressed indices
+        UnionFind uf(variables.size());
+        bool possible = true;
+        
+        // Process equality constraints
+        for (auto& [x, y, e] : constraints) {
             if (e == 1) { // equality constraint
-                uf.unite(x, y);
-            } else { // inequality constraint
-                inequalities.push_back({x, y});
+                uf.unite(comp[x], comp[y]);
             }
         }
         
-        // Check all inequality constraints
-        for (auto& p : inequalities) {
-            if (uf.connected(p.first, p.second)) {
-                possible = false;
-                break;
+        // Check inequality constraints
+        for (auto& [x, y, e] : constraints) {
+            if (e == 0) { // inequality constraint
+                if (uf.connected(comp[x], comp[y])) {
+                    possible = false;
+                    break;
+                }
             }
         }
         
