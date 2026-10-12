@@ -2,6 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <cstdio>
 
 using namespace std;
 
@@ -44,59 +45,58 @@ public:
     bool connected(int x, int y) {
         return find(x) == find(y);
     }
+    
+    void clear() {
+        parent.clear();
+        rank.clear();
+    }
 };
 
 int main() {
+    // Use faster I/O
     ios_base::sync_with_stdio(false);
     cin.tie(nullptr);
     
     int t;
-    cin >> t;
+    scanf("%d", &t);
+    
+    UnionFind uf;
     
     while (t--) {
         int n;
-        cin >> n;
+        scanf("%d", &n);
         
-        vector<pair<pair<int, int>, int>> constraints;
+        // Clear the union-find structure for each test case
+        uf.clear();
         
-        for (int i = 0; i < n; i++) {
-            int x, y, e;
-            cin >> x >> y >> e;
-            constraints.push_back({{x, y}, e});
-        }
-        
-        UnionFind uf;
+        // We'll store inequality constraints to check after processing equalities
+        vector<pair<int, int>> inequalities;
         bool possible = true;
         
-        // First pass: process all equality constraints
-        for (auto& constraint : constraints) {
-            int x = constraint.first.first;
-            int y = constraint.first.second;
-            int e = constraint.second;
+        // Process constraints
+        for (int i = 0; i < n; i++) {
+            int x, y, e;
+            scanf("%d %d %d", &x, &y, &e);
             
             if (e == 1) { // equality constraint
                 uf.unite(x, y);
+            } else { // inequality constraint
+                inequalities.push_back({x, y});
             }
         }
         
-        // Second pass: check all inequality constraints
-        for (auto& constraint : constraints) {
-            int x = constraint.first.first;
-            int y = constraint.first.second;
-            int e = constraint.second;
-            
-            if (e == 0) { // inequality constraint
-                if (uf.connected(x, y)) {
-                    possible = false;
-                    break;
-                }
+        // Check all inequality constraints
+        for (auto& p : inequalities) {
+            if (uf.connected(p.first, p.second)) {
+                possible = false;
+                break;
             }
         }
         
         if (possible) {
-            cout << "YES\n";
+            printf("YES\n");
         } else {
-            cout << "NO\n";
+            printf("NO\n");
         }
     }
     
